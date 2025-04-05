@@ -1,0 +1,1352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>STM Status Control Panel</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      height: 100%;
+      width: 100%;
+      overflow: hidden;
+      background: #000;
+      font-family: sans-serif;
+      color: #eee;
+    }
+
+    body {
+      position: relative;
+      min-height: 100vh;
+      background-color: #000;
+      background-image: linear-gradient(rgba(0, 0, 0, 0.75), rgba(0, 0, 0, 0.75)), url('bg.jpg');
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      background-attachment: fixed;
+      font-family: sans-serif;
+      color: #eee;
+      overflow: hidden;
+    }
+
+    .immersive-container {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      perspective: 1000px;
+      overflow: hidden;
+    }
+    .control-panel {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      z-index: 5;
+      opacity: 1;
+      transform: translateZ(200px) scale(0.6);
+      transition: transform 2.5s ease;
+      transition-delay: 0.2s;
+    }
+
+    .control-panel.visible {
+      transform: translateZ(0) scale(1);
+    }
+
+    .control-panel.visible .toggle-button {
+      z-index: 500;
+      pointer-events: auto;
+    }
+
+    .metro-container {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      z-index: 30;
+      transform: translateZ(250px);
+    }
+
+    .door {
+      width: 50%;
+      height: 100%;
+      background-image: url('https://media-hosting.imagekit.io/703bed1742014960/stmstatfinal.webp?Expires=1838480131&Key-Pair-Id=K2ZIVPTIP2VGHC&Signature=qiAvyG5GwN2v20xJ6ptu7B9chcooSj1n9d4-dhIXLhd~nDDGoIcEZXsWik4Sh-5OstlHEqbzOpYISy31EsKW8qydy83BLi1c7sbM67lpUTk-vTN0MsGuy212AAoRvRdCOn~uJW-MTaUo-tnGXREDJMXKM0sS7EN8vgySjbtjpL6rhyagWmDOAHmDGVRcSVEw44HkUTTGT8UtqL0uMk3mcT-EdLnZfKBlL8Uo13hlmIvyDk0uI7P6VMLCexf5Qp7GdogO95hsECqiFPaizYK0xwZdrHKXdNuH8W9-9EDWdcctR7ahVmccWWkwaL9poSa9juEY12BTO5dbwPkbiCv7OA__');
+      background-size: 200% 100%;
+      background-repeat: no-repeat;
+      transition: transform 1.5s ease;
+    }
+
+    .left-door {
+      background-position: left;
+    }
+
+    .right-door {
+      background-position: right;
+    }
+
+    .open-left {
+      transform: translateX(-100%);
+    }
+
+    .open-right {
+      transform: translateX(100%);
+    }
+
+    .scrolling-header {
+      width: 100%;
+      background-color: #000;
+      height: 40px;
+      overflow-x: auto;
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      padding: 0 15px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0);
+    }
+
+    .status-dot {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      background-color: #f47216; 
+      border-radius: 50%;
+      margin-right: 8px;
+    }
+
+    .site-name {
+      color: #fff;
+      font-size: 14px;
+      font-weight: 500;
+      letter-spacing: 0.5px;
+      display: inline-block;
+    }
+
+    .content-wrapper {
+      background-color: rgba(0, 0, 0, 0); /* Increased opacity for better contrast with background */
+      padding: 30px;
+      border-radius: 15px;
+      margin: auto;
+      flex-grow: 1;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      box-shadow: 0 8px 20px rgba(0,0,0,0);
+      height: calc(100% - 40px);
+    }
+
+    .overlay-container {
+      position: relative;
+      max-width: 900px;
+      height: auto;
+      transform: scale(2.0);
+      transform-origin: center;
+    }
+
+    .overlay-container object {
+      display: block;
+      width: 100%;
+      height: auto;
+      max-width: 100%;
+    }
+
+    .toggle-button {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      background-color: #4dff00;
+      border-radius: 50%;
+      cursor: help; /* Change cursor to help to indicate info is available */
+      z-index: 100;
+      border: 1px solid #333;
+      box-shadow:
+      inset 0 1px 2px rgba(0,0,0,0.6),
+          0 1px 2px rgba(255,255,255,0.2),
+          0 0 8px 3px rgba(0, 255, 0, 0.3);
+      transition: box-shadow 0.3s ease, background-color 0.3s ease;
+      pointer-events: auto; /* Allow hover events */
+    }
+
+    .toggle-button.active {
+      background-color: #ff0000;
+      box-shadow:
+          inset 0 1px 2px rgba(0,0,0,0.6),
+          0 1px 2px rgba(255,255,255,0.2),
+          0 0 8px 3px rgba(255, 0, 0, 0.3);
+    }
+
+    .toggle-button.reported {
+        background-color: #ffcc00;
+        box-shadow:
+            inset 0 1px 2px rgba(0,0,0,0.6),
+            0 1px 2px rgba(255,255,255,0.2),
+            0 0 8px 3px rgba(255, 204, 0, 0.8);
+    }
+
+    .toggle-button--small {
+      width: 8px;
+      height: 8px;
+    }
+
+    #menu-trigger {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      width: 50px;
+      height: 45px;
+      background-color: #f5cc00; /* Warning yellow */
+      border-radius: 0; /* Remove circular shape */
+      clip-path: polygon(50% 0%, 0% 100%, 100% 100%); /* Triangle shape */
+      cursor: pointer;
+      z-index: 1000;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      transition: background-color 0.3s ease, transform 0.2s ease;
+      opacity: 0;
+      transform: scale(0);
+      transition-delay: 0.5s; /* Reduced from 2s to 0.5s */
+    }
+    
+    #menu-trigger.visible {
+      opacity: 1;
+      transform: scale(1);
+    }
+    
+    #menu-trigger:hover {
+      background-color: #e5bc00; /* Darker warning yellow */
+    }
+
+    #menu-trigger:active {
+      transform: scale(0.95);
+    }
+
+    #menu-trigger::before {
+      content: '!'; /* Exclamation mark */
+      font-size: 32px;
+      color: black;
+      font-weight: bold;
+      margin-bottom: -5px;
+    }
+
+    #swoop-menu {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      width: 50px;
+      height: 50px;
+      background-color: rgba(40, 40, 40, 0.95);
+      border-radius: 25px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+      z-index: 998;
+      transform: scale(0);
+      transform-origin: bottom right;
+      transition: all 0.5s cubic-bezier(0.25, 0.1, 0.25, 1.1);
+      padding: 20px;
+      box-sizing: border-box;
+      overflow: hidden;
+      color: #eee;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      opacity: 0;
+    }
+
+    #swoop-menu.visible {
+      width: 350px;
+      height: 500px;
+      transform: scale(1);
+      opacity: 1;
+      border-radius: 20px;
+    }
+    
+    #swoop-menu h2 {
+      margin-bottom: 20px;
+      color: #f5cc00; /* Changed from orange to warning yellow */
+      width: 100%;
+      text-align: center;
+      opacity: 0;
+      transform: translateY(20px);
+      transition: all 0.3s ease 0.2s;
+    }
+    
+    #swoop-menu.visible h2 {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    
+    .dropdown-container {
+      width: 100%;
+      margin-bottom: 15px;
+      opacity: 0;
+      transform: translateY(20px);
+      transition: all 0.3s ease;
+    }
+    
+    #swoop-menu.visible .dropdown-container {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    
+    .dropdown-container:nth-child(2) { transition-delay: 0.25s; }
+    .dropdown-container:nth-child(3) { transition-delay: 0.3s; }
+    .dropdown-container:nth-child(4) { transition-delay: 0.35s; }
+    .dropdown-container:nth-child(5) { transition-delay: 0.4s; }
+    .dropdown-container:nth-child(6) { transition-delay: 0.45s; }
+    
+    .dropdown-header {
+      background-color: #333;
+      padding: 12px 15px;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border: 1px solid #444;
+    }
+    
+    .dropdown-header:hover {
+      background-color: #3a3a3a;
+    }
+    
+    .dropdown-header::after {
+      content: "▼";
+      font-size: 12px;
+      transition: transform 0.3s ease;
+    }
+    
+    .dropdown-header.open::after {
+      transform: rotate(180deg);
+    }
+    
+    .dropdown-content {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease;
+      background-color: #2a2a2a;
+      border-radius: 0 0 8px 8px;
+      margin-top: 2px;
+      padding: 0 15px;
+    }
+    
+    .dropdown-content.open {
+      max-height: 200px;
+      padding: 15px;
+    }
+
+    .downscale {
+      transform: scale(1.5);
+      transform-origin: center;
+    }
+
+    /* Station Info Box Styles */
+    #station-info {
+      position: fixed;
+      left: 20px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 250px;
+      background-color: rgba(30, 30, 30, 0.9);
+      border: 1px solid #444;
+      border-radius: 10px;
+      padding: 15px;
+      color: #fff;
+      box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+      z-index: 900;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      pointer-events: none;
+    }
+    
+    #station-info.visible {
+      opacity: 1;
+    }
+    
+    #station-info h3 {
+      margin: 0 0 10px 0;
+      color: #f5cc00;
+      font-size: 18px;
+      border-bottom: 1px solid #444;
+      padding-bottom: 8px;
+    }
+    
+    #station-info p {
+      margin: 5px 0;
+      font-size: 14px;
+      line-height: 1.4;
+    }
+    
+    #station-info .status {
+      font-weight: bold;
+      margin-top: 10px;
+    }
+    
+    #station-info .status.operational {
+      color: #4dff00;
+    }
+    
+    #station-info .status.disrupted {
+      color: #ff0000;
+    }
+    
+    #station-info .status.warning {
+      color: #f5cc00;
+    }
+
+    /* Report form styling */
+    .report-field, .time-field {
+      width: 100%;
+      padding: 8px 10px;
+      margin: 5px 0;
+      border-radius: 5px;
+      border: 1px solid #444;
+      background-color: #222;
+      color: #eee;
+      font-size: 14px;
+    }
+    
+    .time-field {
+      width: 45%;
+      display: inline-block;
+    }
+    
+    #report-controls {
+      margin-top: 20px;
+      width: 100%;
+      opacity: 0;
+      transform: translateY(20px);
+      transition: all 0.3s ease 0.5s;
+    }
+    
+    #swoop-menu.visible #report-controls {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    
+    .report-button {
+      width: 100%;
+      padding: 12px;
+      background-color: #f5cc00;
+      color: #000;
+      border: none;
+      border-radius: 8px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+    
+    .report-button:hover {
+      background-color: #e5bc00;
+    }
+    
+    .report-button:disabled {
+      background-color: #555;
+      color: #888;
+      cursor: not-allowed;
+    }
+    
+    #report-status {
+      margin-top: 10px;
+      text-align: center;
+      font-size: 14px;
+      min-height: 20px;
+    }
+    
+    .status-success {
+      color: #4dff00;
+    }
+    
+    .status-error {
+      color: #ff0000;
+    }
+    
+    .required-field {
+      border-color: #ff0000;
+    }
+  </style>
+</head>
+<body>
+  
+  <div class="immersive-container">
+    <div class="metro-container">
+      <div class="door left-door"></div>
+      <div class="door right-door"></div>
+    </div>
+
+    <div class="control-panel">
+      <div class="content-wrapper">
+        <div class="overlay-container downscale">
+            <div class="toggle-button" id="btn1" style="transform: translate(38px, 49px);" title="Button 1"></div>
+            <div class="toggle-button" id="btn2" style="transform: translate(78px, 49px);" title="Button 2"></div>
+            <div class="toggle-button" id="btn3" style="transform: translate(122px, 56px);" title="Button 3"></div>
+            <div class="toggle-button" id="btn4" style="transform: translate(148px, 90px);" title="Button 4"></div>
+            <div class="toggle-button" id="btn5" style="transform: translate(169px, 119px);" title="Button 5"></div>
+            <div class="toggle-button" id="btn6" style="transform: translate(180px, 132px);" title="Button 6"></div>
+            <div class="toggle-button" id="btn7" style="transform: translate(193px, 149px);" title="Button 7"></div>
+            <div class="toggle-button" id="btn8" style="transform: translate(203px, 163px);" title="Button 8"></div>
+            <div class="toggle-button" id="btn9" style="transform: translate(215px, 178px);" title="Button 9"></div>
+            <div class="toggle-button" id="btn10" style="transform: translate(225px, 192px);" title="Button 10"></div>
+            <div class="toggle-button" id="btn11" style="transform: translate(235px, 206px);" title="Button 11"></div>
+            <div class="toggle-button" id="btn12" style="transform: translate(246px, 219px);" title="Button 12"></div>
+            <div class="toggle-button" id="btn13" style="transform: translate(262px, 241px);" title="Button 13"></div>
+            <div class="toggle-button" id="btn14" style="transform: translate(268px, 269px);" title="Button 14"></div>
+            <div class="toggle-button" id="btn15" style="transform: translate(251px, 282px);" title="Button 15"></div>
+            <div class="toggle-button" id="btn16" style="transform: translate(234px, 295px);" title="Button 16"></div>
+            <div class="toggle-button" id="btn17" style="transform: translate(216px, 308px);" title="Button 17"></div>
+            <div class="toggle-button" id="btn18" style="transform: translate(198px, 321px);" title="Button 18"></div>
+            <div class="toggle-button" id="btn19" style="transform: translate(182px, 334px);" title="Button 19"></div>
+            <div class="toggle-button" id="btn20" style="transform: translate(166px, 346px);" title="Button 20"></div>
+            <div class="toggle-button" id="btn21" style="transform: translate(143px, 337px);" title="Button 21"></div>
+            <div class="toggle-button" id="btn22" style="transform: translate(130px, 319px);" title="Button 22"></div>
+            <div class="toggle-button" id="btn23" style="transform: translate(117px, 302px);" title="Button 23"></div>
+            <div class="toggle-button" id="btn24" style="transform: translate(104px, 283px);" title="Button 24"></div>
+            <div class="toggle-button toggle-button--small" id="btn25" style="transform: translate(95px, 273px);" title="Button 25"></div>
+            <div class="toggle-button toggle-button--small" id="btn26" style="transform: translate(86px, 261px);" title="Button 26"></div>
+            <div class="toggle-button toggle-button--small" id="btn27" style="transform: translate(77px, 249px);" title="Button 27"></div>
+            <div class="toggle-button toggle-button--small" id="btn28" style="transform: translate(68px, 237px);" title="Button 28"></div>
+            <div class="toggle-button toggle-button--small" id="btn29" style="transform: translate(59px, 225px);" title="Button 29"></div>
+            <div class="toggle-button" id="btn30" style="transform: translate(48px, 210px);" title="Button 30"></div>
+            <div class="toggle-button" id="btn31" style="transform: translate(373px, 101px);" title="Button 31"></div>
+            <div class="toggle-button toggle-button--small" id="btn32" style="transform: translate(362px, 113px);" title="Button 32"></div>
+            <div class="toggle-button toggle-button--small" id="btn33" style="transform: translate(350px, 122px);" title="Button 33"></div>
+            <div class="toggle-button toggle-button--small" id="btn34" style="transform: translate(338px, 131px);" title="Button 34"></div>
+            <div class="toggle-button toggle-button--small" id="btn35" style="transform: translate(333px, 146px);" title="Button 35"></div>
+            <div class="toggle-button toggle-button--small" id="btn36" style="transform: translate(335px, 163px);" title="Button 36"></div>
+            <div class="toggle-button toggle-button--small" id="btn37" style="transform: translate(323px, 171px);" title="Button 37"></div>
+            <div class="toggle-button toggle-button--small" id="btn38" style="transform: translate(311px, 181px);" title="Button 38"></div>
+            <div class="toggle-button toggle-button--small" id="btn39" style="transform: translate(299px, 190px);" title="Button 39"></div>
+            <div class="toggle-button toggle-button--small" id="btn40" style="transform: translate(292px, 203px);" title="Button 40"></div>
+            <div class="toggle-button toggle-button--small" id="btn41" style="transform: translate(295px, 218px);" title="Button 41"></div>
+            <div class="toggle-button toggle-button--small" id="btn42" style="transform: translate(283px, 228px);" title="Button 42"></div>
+            <div class="toggle-button" id="btn43" style="transform: translate(248px, 251px);" title="Button 43"></div>
+            <div class="toggle-button" id="btn44" style="transform: translate(232px, 263px);" title="Button 44"></div>
+            <div class="toggle-button" id="btn45" style="transform: translate(215px, 276px);" title="Button 45"></div>
+            <div class="toggle-button" id="btn46" style="transform: translate(198px, 289px);" title="Button 46"></div>
+            <div class="toggle-button" id="btn47" style="transform: translate(181px, 302px);" title="Button 47"></div>
+            <div class="toggle-button" id="btn48" style="transform: translate(164px, 315px);" title="Button 48"></div>
+            <div class="toggle-button" id="btn49" style="transform: translate(179px, 364px);" title="Button 49"></div>
+            <div class="toggle-button toggle-button--small" id="btn50" style="transform: translate(183px, 385px);" title="Button 50"></div>
+            <div class="toggle-button toggle-button--small" id="btn51" style="transform: translate(170px, 395px);" title="Button 51"></div>
+            <div class="toggle-button toggle-button--small" id="btn52" style="transform: translate(155px, 405px);" title="Button 52"></div>
+            <div class="toggle-button toggle-button--small" id="btn53" style="transform: translate(139px, 399px);" title="Button 53"></div>
+            <div class="toggle-button toggle-button--small" id="btn54" style="transform: translate(123px, 409px);" title="Button 54"></div>
+            <div class="toggle-button" id="btn55" style="transform: translate(108px, 418px);" title="Button 55"></div>
+            <div class="toggle-button" id="btn56" style="transform: translate(238px, 114px);" title="Button 56"></div>
+            <div class="toggle-button" id="btn57" style="transform: translate(222px, 126px);" title="Button 57"></div>
+            <div class="toggle-button" id="btn58" style="transform: translate(208px, 136px);" title="Button 58"></div>
+            <div class="toggle-button" id="btn59" style="transform: translate(176px, 161px);" title="Button 59"></div>
+            <div class="toggle-button" id="btn60" style="transform: translate(161px, 173px);" title="Button 60"></div>
+            <div class="toggle-button" id="btn61" style="transform: translate(158px, 191px);" title="Button 61"></div>
+            <div class="toggle-button" id="btn62" style="transform: translate(175px, 213px);" title="Button 62"></div>
+            <div class="toggle-button" id="btn63" style="transform: translate(167px, 235px);" title="Button 63"></div>
+            <div class="toggle-button" id="btn64" style="transform: translate(147px, 251px);" title="Button 64"></div>
+            <div class="toggle-button" id="btn65" style="transform: translate(126px, 267px);" title="Button 65"></div>
+            <div class="toggle-button" id="btn66" style="transform: translate(307px, 258px);" title="Button 66"></div>
+            <div class="toggle-button" id="btn67" style="transform: translate(339px, 245px);" title="Button 67"></div>
+
+          <object data="stm-map.svg" type="image/svg+xml"></object>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Station Info Box -->
+  <div id="station-info">
+    <h3 id="station-name">Station Name</h3>
+    <p id="station-line">Line: <span></span></p>
+    <p id="station-connections">Connections: <span></span></p>
+    <p id="station-details">Details: <span></span></p>
+    <p id="station-status" class="status">Status: <span></span></p>
+  </div>
+
+  <audio id="metroChime" preload="auto">
+    <source src="https://raw.githubusercontent.com/yashikakashyapp/soundeffect/main/Montreal%20Metro%E2%80%99s%20Door%20Chime%20(Dou%20dou%20douuuu).mp3" type="audio/mp3">
+  </audio>
+
+  <div id="menu-trigger" title="Open Menu"></div>
+
+  <div id="swoop-menu">
+    <h2>Report Metro Issue</h2>
+    <div class="dropdown-container">
+      <div class="dropdown-header">Type of Interruption (Required)</div>
+      <div class="dropdown-content open">
+        <select id="interruption-type" class="report-field">
+          <option value="">-- Select Type --</option>
+          <option value="Slowdown">Slowdown</option>
+          <option value="Shutdown">Shutdown</option>
+        </select>
+      </div>
+    </div>
+    <div class="dropdown-container">
+      <div class="dropdown-header">Emergency Code (Optional)</div>
+      <div class="dropdown-content">
+        <select id="emergency-code" class="report-field">
+          <option value="">-- Select Code --</option>
+          <option value="901">901 - Medical Emergency</option>
+          <option value="902">902 - Security Issue</option>
+          <option value="903">903 - Track Obstruction</option>
+          <option value="904">904 - Technical Problem</option>
+          <option value="905">905 - Weather Related</option>
+          <option value="906">906 - Station Closure</option>
+          <option value="907">907 - Power Outage</option>
+          <option value="908">908 - Signal Failure</option>
+          <option value="909">909 - Equipment Malfunction</option>
+          <option value="910">910 - Crowd Control</option>
+          <option value="911">911 - Emergency Services</option>
+          <option value="912">912 - Staff Shortage</option>
+          <option value="913">913 - Other</option>
+        </select>
+      </div>
+    </div>
+    <div class="dropdown-container">
+      <div class="dropdown-header">Start Station (Required)</div>
+      <div class="dropdown-content">
+        <select id="start-station" class="report-field">
+          <option value="">-- Select Station --</option>
+          <!-- Will be populated dynamically with JavaScript -->
+        </select>
+      </div>
+    </div>
+    <div class="dropdown-container">
+      <div class="dropdown-header">End Station (Optional)</div>
+      <div class="dropdown-content">
+        <select id="end-station" class="report-field">
+          <option value="">-- Select Station --</option>
+          <!-- Will be populated dynamically with JavaScript -->
+        </select>
+      </div>
+    </div>
+    <div class="dropdown-container">
+      <div class="dropdown-header">Expected Resume Time (Optional)</div>
+      <div class="dropdown-content">
+        <select id="resume-hour" class="time-field">
+          <option value="">Hour</option>
+          <!-- Hours 00-23 will be populated by JavaScript -->
+        </select>
+        <span>:</span>
+        <select id="resume-minute" class="time-field">
+          <option value="">Min</option>
+          <!-- Minutes 00-59 will be populated by JavaScript -->
+        </select>
+      </div>
+    </div>
+    <div id="report-controls">
+      <button id="submit-report" class="report-button">Submit Report</button>
+      <div id="report-status"></div>
+    </div>
+  </div>
+
+  <!-- Load Pyodide -->
+  <script src="https://cdn.jsdelivr.net/pyodide/v0.23.4/full/pyodide.js"></script>
+  
+  <script>
+    const audio = document.getElementById('metroChime');
+    
+    window.addEventListener("DOMContentLoaded", () => {
+      initializePyodide();
+      
+      setTimeout(() => {
+        audio.play().catch(e => console.log("Autoplay blocked:", e));
+        
+        document.querySelector('.left-door').classList.add('open-left');
+        document.querySelector('.right-door').classList.add('open-right');
+        
+        document.querySelector('.control-panel').classList.add('visible');
+        
+        setTimeout(() => {
+          const metroContainer = document.querySelector('.metro-container');
+          metroContainer.remove();
+          
+          const toggleButtons = document.querySelectorAll('.toggle-button');
+          toggleButtons.forEach(button => {
+            button.style.pointerEvents = 'auto';
+            button.style.zIndex = '500';
+          });
+          
+          document.getElementById('menu-trigger').classList.add('visible');
+        }, 1000); // Reduced from 2500ms to 1000ms
+      }, 1000);
+    });
+
+    // Station information dictionary - will be populated from MongoDB
+    const stationInfo = {};
+    let officialStatus = {};
+    let userStatus = {};
+
+    // Initialize Pyodide and load MongoDB data
+    async function initializePyodide() {
+      try {
+        console.log("Loading Pyodide...");
+        document.getElementById('system-status-content').innerHTML = "<p>Loading system data...</p>";
+        
+        // Initialize Pyodide
+        pyodide = await loadPyodide({
+          indexURL: "https://cdn.jsdelivr.net/pyodide/v0.23.4/full/"
+        });
+
+        // Load required packages
+        await pyodide.loadPackage("micropip");
+        const micropip = await pyodide.pyimport("micropip");
+        await micropip.install("pymongo");
+        await micropip.install("query");
+        await micropip.install("datetime");
+        await micropip.install("json");
+
+        // Run Python code to connect to MongoDB
+        await pyodide.runPythonAsync(`
+          from pymongo import MongoClient
+          import query
+          import datetime
+          import json
+
+          uri = "mongodb+srv://fioritajoseph0:CVgaD9c2OgGmcLqs@stmstatus.b5psy89.mongodb.net/?retryWrites=true&w=majority&appName=STMStatus"
+          client = MongoClient(uri)
+          db = client.STMTracker
+          now = datetime.datetime.now()
+          import requests
+          import os
+          BASE_URL = "https://api.stm.info/pub/od/i3/v2/messages/etatservice"
+
+          def refreshEntrySTMStatus():
+              try:
+                  data = query.refreshSTMData()
+                  inputs = db.officialInputs
+                  inputs.update_one({"_id": 1}, {"$set": data})
+                  return True
+              except Exception as e:
+                  raise Exception("Unable to find the document due to the following error: ", e)
+                  
+          def retrieveEntrySTMStatus():
+              try:
+                  inputs = db.officialInputs
+                  docs = inputs.find()
+                  return json.dumps(list(docs), default=str)
+              except Exception as e:
+                  raise Exception("Unable to find the document due to the following error: ", e)
+
+          def retrieveUserInputs():
+              try:
+                  inputs = db.userInputs
+                  reports = list(inputs.find())
+                  # Delete entries older than 1 hour
+                  for input in reports:
+                      input_time = datetime.datetime.strptime(input["Time"], "%Y-%m-%d %H:%M:%S")
+                      if now - input_time >= datetime.timedelta(hours=1):
+                          inputs.delete_one({"Time": input["Time"]})
+                  return json.dumps(reports, default=str)
+              except Exception as e:
+                  raise Exception("Unable to find the document due to the following error: ", e)
+                  
+          def statusFromCode():
+              network_data = fetch_service_status()
+              metro_data = network_data["alerts"][-4:]
+              return {
+                  "1": metro_data[0]["description_texts"][1]["text"],
+                  "5": metro_data[1]["description_texts"][1]["text"],
+                  "2": metro_data[2]["description_texts"][1]["text"],
+                  "4": metro_data[3]["description_texts"][1]["text"]
+              }
+
+          def refreshSTMData():
+              status = statusFromCode()
+              stations = {
+                  1: ["Angrignon", "Monk", "Jolicoeur", "Verdun", "De L'Église", "LaSalle", "Charlevoix", "Lionel-Groulx", "Atwater", "Guy-Concordia", "Guy-Concordia", "Peel", "McGill", "Place-des-Arts", "Saint-Laurent", "Berri-UQAM", "Berri-UQAM", "Beaudry", "Papineau", "Frontenac", "Préfontaine", "Joliette", "Pie-IX", "Viau", "Assomption", "Cadillac", "Langelier", "Radisson", "Honoré-Beaugrand"],
+                  2: ["Côte-Vertu", "Du Collège", "De La Savane", "Namur", "Plamondon", "Côte-Sainte-Catherine", "Snowdon", "Villa-Maria", "Vendôme", "Place-Saint-Henri", "Lionel-Groulx", "Georges-Vanier", "Lucien-L'Allier", "Bonaventure", "Square-Victoria-OACI", "Place-d'Armes", "Champ-de-Mars", "Berri-UQAM", "Sherbrooke", "Mont-Royal", "Laurier", "Rosemont", "Beaubien", "Jean-Talon", "Jarry", "Crémazie", "Sauvé", "Henri-Bourassa", "Cartier", "De La Concorde", "Montmorency"],
+                  4: ["Berri-UQAM", " Jean-Drapeau", "Longueuil-U-de-S"],
+                  5: ["Snowdon", "Côte-des-Neiges", "Université-de-Montréal", "Édouard-Montpetit", "Outremont", "Acadie", "Parc", "De Castelnau", "Jean-Talon", "Fabre", "D'Iberville", "Saint-Michel"]
+              }
+
+              ret_dict = {
+                  "_id": 1,
+                  "1": {"working": True, "start_effect": "", "end_effect": "", "reason": "", "resume": ""}, 
+                  "5": {"working": True, "start_effect": "", "end_effect": "", "reason": "", "resume": ""}, 
+                  "2": {"working": True, "start_effect": "", "end_effect": "", "reason": "", "resume": ""}, 
+                  "4": {"working": True, "start_effect": "", "end_effect": "", "reason": "", "resume": ""}
+              }
+
+              for i in ["1", "5", "2", "4"]:
+                  if status[i] != "Normal métro service" and status[i][:27] == f"Service interruption line {i}":
+                      cleaned = status[i].replace(f"Service interruption line {i} - {'GREEN' if i == '1' else 'BLUE' if i == '5' else 'ORANGE' if i == '2' else 'YELLOW' if i == '4' else '/ERROR - Metro line index incorrect/'} between ", "")
+
+                      ret_dict[i]["working"] = False
+
+                      ret_dict[i]["start_effect"] = cleaned[:cleaned.find("and") -1]
+                      cleaned = cleaned[cleaned.find("and") + 4:]
+
+                      ret_dict[i]["end_effect"] = cleaned[:cleaned.find(".")]
+                      cleaned = cleaned.replace(cleaned[:cleaned.find(".")], "BREAKPOINT")
+
+                      try:
+                          cleaned = cleaned.replace("Inter.", "Interruption")
+                      except:
+                          pass
+
+                      indeflag = False
+                      
+                      try:
+                          cleaned = cleaned.replace("BREAKPOINT. ", "+")
+                          if "Service" in cleaned:
+                              cleaned = cleaned.replace(" Service", "?")
+                          else:
+                              cleaned = cleaned.replace(" Indefinite", "?")
+                              indeflag = True
+                          ret_dict[i]["reason"] = cleaned[cleaned.index("+") + 1: cleaned.index("?")]
+                      except:
+                          ret_dict[i]["reason"] = "No reason given."
+                      if indeflag:
+                          cleaned = cleaned.replace("?", "Indefinite")
+
+                      try:
+                          cleaned = cleaned[cleaned.index("at") + 3:]
+                          cleaned = cleaned[:cleaned.index(".")]
+                          ret_dict[i]["resume"] = cleaned
+                      except:
+                          ret_dict[i]["resume"] = "Indefinite period."
+              return ret_dict
+              
+          def fetch_service_status():
+              headers = {"apiKey": "l72eb96e86f939436d935202bc9d011ac6", "accept": "application/json"}
+              try:
+                  response = requests.get(BASE_URL, headers=headers)
+                  if response.status_code == 200:
+                      service_data = response.json()
+                      return service_data
+                  else:
+                      return {"alerts": [{"description_texts": [{"text": ""}, {"text": "Normal métro service"}]} for _ in range(4)]}
+              except Exception as e:
+                  return {"alerts": [{"description_texts": [{"text": ""}, {"text": "Normal métro service"}]} for _ in range(4)]}
+        `);
+
+        // Refresh STM status and get data
+        await pyodide.runPythonAsync("refreshEntrySTMStatus()");
+        const officialStatusStr = await pyodide.runPythonAsync("retrieveEntrySTMStatus()");
+        const userStatusStr = await pyodide.runPythonAsync("retrieveUserInputs()");
+        
+        // Parse the data
+        officialStatus = JSON.parse(officialStatusStr)[0];
+        userStatus = JSON.parse(userStatusStr);
+        
+        console.log("Official Status:", officialStatus);
+        console.log("User Status:", userStatus);
+        
+        // Populate station information
+        populateStationInfo();
+        
+        // Update System Status in UI
+        updateSystemStatusDisplay();
+        
+        // Populate station dropdowns and setup report form
+        populateStationDropdowns();
+        setupReportForm();
+        
+      } catch (error) {
+        console.error("Error initializing Pyodide:", error);
+        document.getElementById('system-status-content').innerHTML = "<p>Error loading system data. Please try again later.</p>";
+      }
+    }
+
+    // Populate the stationInfo dictionary with data from MongoDB
+    function populateStationInfo() {
+      // Map of button IDs to station data
+      const stationMap = {
+        // Orange Line (Montmorency to Côte-Vertu)
+        btn1: { name: "Montmorency", line: "2", index: 30 },
+        btn2: { name: "De La Concorde", line: "2", index: 29 },
+        btn3: { name: "Cartier", line: "2", index: 28 },
+        btn4: { name: "Henri-Bourassa", line: "2", index: 27 },
+        btn5: { name: "Sauvé", line: "2", index: 26 },
+        btn6: { name: "Crémazie", line: "2", index: 25 },
+        btn7: { name: "Jarry", line: "2", index: 24 },
+        btn8: { name: "Jean-Talon", line: "2", index: 23 },
+        btn9: { name: "Beaubien", line: "2", index: 22 },
+        btn10: { name: "Rosemont", line: "2", index: 21 },
+        btn11: { name: "Laurier", line: "2", index: 20 },
+        btn12: { name: "Mont-Royal", line: "2", index: 19 },
+        btn13: { name: "Sherbrooke", line: "2", index: 18 },
+        btn14: { name: "Berri-UQAM", line: "2", index: 17 },
+        btn15: { name: "Champ-de-Mars", line: "2", index: 16 },
+        btn16: { name: "Place-d'Armes", line: "2", index: 15 },
+        btn17: { name: "Square-Victoria-OACI", line: "2", index: 14 },
+        btn18: { name: "Bonaventure", line: "2", index: 13 },
+        btn19: { name: "Lucien-L'Allier", line: "2", index: 12 },
+        btn20: { name: "Georges-Vanier", line: "2", index: 11 },
+        btn21: { name: "Lionel-Groulx", line: "2", index: 10 },
+        btn22: { name: "Place-Saint-Henri", line: "2", index: 9 },
+        btn23: { name: "Vendôme", line: "2", index: 8 },
+        btn24: { name: "Villa-Maria", line: "2", index: 7 },
+        btn25: { name: "Snowdon", line: "2", index: 6 },
+        btn26: { name: "Côte-Sainte-Catherine", line: "2", index: 5 },
+        btn27: { name: "Plamondon", line: "2", index: 4 },
+        btn28: { name: "Namur", line: "2", index: 3 },
+        btn29: { name: "De La Savane", line: "2", index: 2 },
+        btn30: { name: "Côte-Vertu", line: "2", index: 0 },
+        
+        // Green Line (Honoré-Beaugrand to Angrignon)
+        btn31: { name: "Honoré-Beaugrand", line: "1", index: 26 },
+        btn32: { name: "Radisson", line: "1", index: 25 },
+        btn33: { name: "Langelier", line: "1", index: 24 },
+        btn34: { name: "Cadillac", line: "1", index: 23 },
+        btn35: { name: "Assomption", line: "1", index: 22 },
+        btn36: { name: "Viau", line: "1", index: 21 },
+        btn37: { name: "Pie-IX", line: "1", index: 20 },
+        btn38: { name: "Joliette", line: "1", index: 19 },
+        btn39: { name: "Préfontaine", line: "1", index: 18 },
+        btn40: { name: "Frontenac", line: "1", index: 17 },
+        btn41: { name: "Papineau", line: "1", index: 16 },
+        btn42: { name: "Beaudry", line: "1", index: 15 },
+        // btn13 is already defined for Berri-UQAM in Orange line
+        btn43: { name: "Saint-Laurent", line: "1", index: 13 },
+        btn44: { name: "Place-des-Arts", line: "1", index: 12 },
+        btn45: { name: "McGill", line: "1", index: 11 },
+        btn46: { name: "Peel", line: "1", index: 10 },
+        btn47: { name: "Guy-Concordia", line: "1", index: 9 },
+        btn48: { name: "Atwater", line: "1", index: 8 },
+        // btn20 is already defined for Lionel-Groulx in Orange line
+        btn49: { name: "Charlevoix", line: "1", index: 6 },
+        btn50: { name: "LaSalle", line: "1", index: 5 },
+        btn51: { name: "De L'Église", line: "1", index: 4 },
+        btn52: { name: "Verdun", line: "1", index: 3 },
+        btn53: { name: "Jolicoeur", line: "1", index: 2 },
+        btn54: { name: "Monk", line: "1", index: 1 },
+        btn55: { name: "Angrignon", line: "1", index: 0 },
+        
+        // Blue Line (Saint-Michel to Snowdon)
+        btn56: { name: "Saint-Michel", line: "5", index: 11 },
+        btn57: { name: "D'Iberville", line: "5", index: 10 },
+        btn58: { name: "Fabre", line: "5", index: 9 },
+        // btn8 is already defined for Jean-Talon in Orange line
+        btn59: { name: "De Castelnau", line: "5", index: 7 },
+        btn60: { name: "Parc", line: "5", index: 6 },
+        btn61: { name: "Acadie", line: "5", index: 5 },
+        btn62: { name: "Outremont", line: "5", index: 4 },
+        btn63: { name: "Édouard-Montpetit", line: "5", index: 3 },
+        btn64: { name: "Université-de-Montréal", line: "5", index: 2 },
+        btn65: { name: "Côte-des-Neiges", line: "5", index: 1 },
+        // btn25 is already defined for Snowdon in Orange line
+        
+        // Yellow Line (Berri-UQAM to Longueuil-Université-de-Sherbrooke)
+        // btn14 is already defined for Berri-UQAM in Orange line
+        btn66: { name: "Jean-Drapeau", line: "4", index: 1 },
+        btn67: { name: "Longueuil-U-de-S", line: "4", index: 2 },
+      };
+
+      // Build the stationInfo dictionary from MongoDB data
+      Object.entries(stationMap).forEach(([btnId, stationData]) => {
+        const { name, line, index } = stationData;
+        const lineData = officialStatus[line] || { working: true };
+        const isAffected = !lineData.working && 
+            (lineData.start_effect === name || lineData.end_effect === name ||
+             (getStationIndex(lineData.start_effect, line) <= index && 
+              getStationIndex(lineData.end_effect, line) >= index));
+              
+        stationInfo[btnId] = {
+          name: name,
+          line: `${getLineName(line)} Line`,
+          connections: getStationConnections(name),
+          details: getStationDetails(name),
+          status: isAffected ? "disrupted" : "operational"
+        };
+        
+        // Update button display
+        if (isAffected) {
+          document.getElementById(btnId).classList.add('active');
+        }
+      });
+      
+      // Additional function to incorporate user reports
+      updateStationsWithUserReports();
+    }
+    
+    // Get the index of a station in its line
+    function getStationIndex(stationName, line) {
+      const stationLists = {
+        "1": ["Angrignon", "Monk", "Jolicoeur", "Verdun", "De L'Église", "LaSalle", "Charlevoix", "Lionel-Groulx", "Atwater", "Guy-Concordia", "Peel", "McGill", "Place-des-Arts", "Saint-Laurent", "Berri-UQAM", "Beaudry", "Papineau", "Frontenac", "Préfontaine", "Joliette", "Pie-IX", "Viau", "Assomption", "Cadillac", "Langelier", "Radisson", "Honoré-Beaugrand"],
+        "2": ["Côte-Vertu", "Du Collège", "De La Savane", "Namur", "Plamondon", "Côte-Sainte-Catherine", "Snowdon", "Villa-Maria", "Vendôme", "Place-Saint-Henri", "Lionel-Groulx", "Georges-Vanier", "Lucien-L'Allier", "Bonaventure", "Square-Victoria-OACI", "Place-d'Armes", "Champ-de-Mars", "Berri-UQAM", "Sherbrooke", "Mont-Royal", "Laurier", "Rosemont", "Beaubien", "Jean-Talon", "Jarry", "Crémazie", "Sauvé", "Henri-Bourassa", "Cartier", "De La Concorde", "Montmorency"],
+        "4": ["Berri-UQAM", "Jean-Drapeau", "Longueuil-U-de-S"],
+        "5": ["Snowdon", "Côte-des-Neiges", "Université-de-Montréal", "Édouard-Montpetit", "Outremont", "Acadie", "Parc", "De Castelnau", "Jean-Talon", "Fabre", "D'Iberville", "Saint-Michel"]
+      };
+      
+      return stationLists[line].indexOf(stationName);
+    }
+    
+    // Get line name from line number
+    function getLineName(line) {
+      const lineNames = {
+        "1": "Green",
+        "2": "Orange",
+        "4": "Yellow",
+        "5": "Blue"
+      };
+      return lineNames[line] || "Unknown";
+    }
+    
+    // Get station connections
+    function getStationConnections(stationName) {
+      const connections = {
+        "Berri-UQAM": "Orange, Yellow, and Green Lines",
+        "Lionel-Groulx": "Orange and Green Lines",
+        "Jean-Talon": "Orange and Blue Lines",
+        "Snowdon": "Orange and Blue Lines"
+        // Add more connections as needed
+      };
+      return connections[stationName] || "None";
+    }
+    
+    // Get station details
+    function getStationDetails(stationName) {
+      // You can add custom details for each station here
+      return "Metro station";
+    }
+    
+    // Update stations with user reports
+    function updateStationsWithUserReports() {
+      if (!userStatus || !Array.isArray(userStatus)) return;
+      
+      userStatus.forEach(report => {
+        if (report.stationId && report.issue) {
+          const btnId = getBtnIdFromStationName(report.stationName);
+          if (btnId && stationInfo[btnId]) {
+            stationInfo[btnId].status = "warning";
+            stationInfo[btnId].details += ` (Reported issue: ${report.issue})`;
+            
+            // Update button display
+            document.getElementById(btnId).classList.remove('active');
+            document.getElementById(btnId).classList.add('reported');
+          }
+        }
+      });
+    }
+    
+    // Helper to get button ID from station name
+    function getBtnIdFromStationName(stationName) {
+      for (const [btnId, info] of Object.entries(stationInfo)) {
+        if (info.name === stationName) return btnId;
+      }
+      return null;
+    }
+    
+    // Update system status display in the menu
+    function updateSystemStatusDisplay() {
+      let statusHTML = "<h3>Metro Line Status</h3><ul>";
+      
+      ["1", "2", "4", "5"].forEach(line => {
+        const lineData = officialStatus[line] || { working: true };
+        const lineName = getLineName(line);
+        
+        if (lineData.working) {
+          statusHTML += `<li>${lineName} Line: <span style="color: #4dff00">Normal Service</span></li>`;
+        } else {
+          statusHTML += `<li>${lineName} Line: <span style="color: #ff0000">Service Disruption</span><br>
+            Between: ${lineData.start_effect} and ${lineData.end_effect}<br>
+            Reason: ${lineData.reason}<br>
+            Expected to resume: ${lineData.resume}</li>`;
+        }
+      });
+      
+      statusHTML += "</ul>";
+      document.getElementById('system-status-content').innerHTML = statusHTML;
+    }
+
+    // Populate station dropdowns with all stations from all lines
+    function populateStationDropdowns() {
+      const stationLists = {
+        "1": ["Angrignon", "Monk", "Jolicoeur", "Verdun", "De L'Église", "LaSalle", "Charlevoix", "Lionel-Groulx", "Atwater", "Guy-Concordia", "Peel", "McGill", "Place-des-Arts", "Saint-Laurent", "Berri-UQAM", "Beaudry", "Papineau", "Frontenac", "Préfontaine", "Joliette", "Pie-IX", "Viau", "Assomption", "Cadillac", "Langelier", "Radisson", "Honoré-Beaugrand"],
+        "2": ["Côte-Vertu", "Du Collège", "De La Savane", "Namur", "Plamondon", "Côte-Sainte-Catherine", "Snowdon", "Villa-Maria", "Vendôme", "Place-Saint-Henri", "Lionel-Groulx", "Georges-Vanier", "Lucien-L'Allier", "Bonaventure", "Square-Victoria-OACI", "Place-d'Armes", "Champ-de-Mars", "Berri-UQAM", "Sherbrooke", "Mont-Royal", "Laurier", "Rosemont", "Beaubien", "Jean-Talon", "Jarry", "Crémazie", "Sauvé", "Henri-Bourassa", "Cartier", "De La Concorde", "Montmorency"],
+        "4": ["Berri-UQAM", "Jean-Drapeau", "Longueuil-U-de-S"],
+        "5": ["Snowdon", "Côte-des-Neiges", "Université-de-Montréal", "Édouard-Montpetit", "Outremont", "Acadie", "Parc", "De Castelnau", "Jean-Talon", "Fabre", "D'Iberville", "Saint-Michel"]
+      };
+      
+      // Get unique stations (some appear on multiple lines)
+      const allStations = new Set();
+      Object.values(stationLists).forEach(line => {
+        line.forEach(station => allStations.add(station));
+      });
+      
+      // Sort stations alphabetically
+      const sortedStations = Array.from(allStations).sort();
+      
+      // Populate the dropdowns
+      const startStationSelect = document.getElementById('start-station');
+      const endStationSelect = document.getElementById('end-station');
+      
+      sortedStations.forEach(station => {
+        startStationSelect.add(new Option(station, station));
+        endStationSelect.add(new Option(station, station));
+      });
+      
+      // Populate time dropdowns
+      const resumeHourSelect = document.getElementById('resume-hour');
+      const resumeMinuteSelect = document.getElementById('resume-minute');
+      
+      // Hours (00-23)
+      for (let i = 0; i < 24; i++) {
+        const hour = i.toString().padStart(2, '0');
+        resumeHourSelect.add(new Option(hour, hour));
+      }
+      
+      // Minutes (00-59)
+      for (let i = 0; i < 60; i++) {
+        const minute = i.toString().padStart(2, '0');
+        resumeMinuteSelect.add(new Option(minute, minute));
+      }
+    }
+    
+    // Set up the report form submission and validation
+    function setupReportForm() {
+      const submitButton = document.getElementById('submit-report');
+      const statusElement = document.getElementById('report-status');
+      const requiredFields = ['interruption-type', 'start-station'];
+      
+      // Add validation for required fields
+      requiredFields.forEach(fieldId => {
+        const field = document.getElementById(fieldId);
+        field.addEventListener('change', () => {
+          field.classList.toggle('required-field', !field.value);
+          updateSubmitButtonState();
+        });
+      });
+      
+      // Initial validation
+      updateSubmitButtonState();
+      
+      // Handle form submission
+      submitButton.addEventListener('click', async () => {
+        if (submitButton.disabled) return;
+        
+        const interruptionType = document.getElementById('interruption-type').value;
+        const emergencyCode = document.getElementById('emergency-code').value;
+        const startStation = document.getElementById('start-station').value;
+        const endStation = document.getElementById('end-station').value;
+        const resumeHour = document.getElementById('resume-hour').value;
+        const resumeMinute = document.getElementById('resume-minute').value;
+        
+        let resumeTime = '';
+        if (resumeHour && resumeMinute) {
+          resumeTime = `${resumeHour}:${resumeMinute}`;
+        }
+        
+        // Prepare report data
+        const reportData = {
+          issueType: interruptionType,
+          emergencyCode: emergencyCode || null,
+          stationName: startStation,
+          endStation: endStation || null,
+          expectedResume: resumeTime || null,
+          Time: null // Will be set by the dictToPython function
+        };
+        
+        // Submit the report
+        statusElement.textContent = "Submitting report...";
+        statusElement.className = "";
+        submitButton.disabled = true;
+        
+        try {
+          const success = await dictToPython(reportData);
+          if (success) {
+            statusElement.textContent = "Report submitted successfully!";
+            statusElement.className = "status-success";
+            
+            // Reset form
+            document.querySelectorAll('.report-field, .time-field').forEach(field => {
+              field.value = '';
+            });
+            
+            // Refresh data after a short delay
+            setTimeout(async () => {
+              const userStatusStr = await pyodide.runPythonAsync("retrieveUserInputs()");
+              userStatus = JSON.parse(userStatusStr);
+              updateStationsWithUserReports();
+              
+              // Re-enable the submit button after refresh
+              updateSubmitButtonState();
+            }, 2000);
+          } else {
+            throw new Error("Failed to submit report");
+          }
+        } catch (error) {
+          console.error("Error submitting report:", error);
+          statusElement.textContent = "Error submitting report. Please try again.";
+          statusElement.className = "status-error";
+          submitButton.disabled = false;
+        }
+      });
+    }
+    
+    // Update submit button state based on required fields
+    function updateSubmitButtonState() {
+      const submitButton = document.getElementById('submit-report');
+      const requiredFields = ['interruption-type', 'start-station'];
+      
+      const isValid = requiredFields.every(fieldId => {
+        const field = document.getElementById(fieldId);
+        const valid = !!field.value;
+        field.classList.toggle('required-field', !valid);
+        return valid;
+      });
+      
+      submitButton.disabled = !isValid;
+    }
+    
+    // Function to submit report to MongoDB using Pyodide
+    async function dictToPython(inputData) {
+      // If no input data is provided, try to get it from the input element
+      if (!inputData) {
+        console.error("No data provided for submission");
+        return false;
+      }
+      
+      // Ensure the Time field exists, or set it to current time
+      if (!inputData.Time) {
+        // Format the current date and time as YYYY-MM-DD HH:MM:SS
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        const seconds = String(now.getSeconds()).padStart(2, '0');
+        inputData.Time = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+      }
+      
+      // Convert the input data to a JSON string for Python
+      const inputJSON = JSON.stringify(inputData);
+      
+      try {
+        await pyodide.runPythonAsync(`
+        # Convert the JSON string to a Python dictionary
+        import json
+        input_data = json.loads('''${inputJSON}''')
+        
+        # Add the current time if not already present
+        if "Time" not in input_data:
+            input_data["Time"] = now.strftime("%Y-%m-%d %H:%M:%S")
+            
+        # Call the function to add the input to the database
+        newEntryUserInputs(input_data)
+        `);
+        
+        console.log("Successfully added user input to database");
+        return true;
+      } catch (error) {
+        console.error("Error adding user input to database:", error);
+        return false;
+      }
+    }
+
+    // Handle button interaction for station info display
+    const buttons = document.querySelectorAll('.toggle-button');
+    buttons.forEach(button => {
+      const id = button.id;
+      
+      // Remove the click event and make buttons display-only
+      button.addEventListener('click', function(event) {
+        event.preventDefault();
+        event.stopPropagation();
+      });
+      
+      // Add mouseover event to show station info
+      button.addEventListener('mouseover', function() {
+        const info = stationInfo[id];
+        if (info) {
+          const stationInfoBox = document.getElementById('station-info');
+          document.getElementById('station-name').textContent = info.name;
+          document.getElementById('station-line').querySelector('span').textContent = info.line;
+          document.getElementById('station-connections').querySelector('span').textContent = info.connections;
+          document.getElementById('station-details').querySelector('span').textContent = info.details;
+          
+          const statusElement = document.getElementById('station-status');
+          statusElement.querySelector('span').textContent = info.status === 'operational' ? 'Operational' : 
+                                                          info.status === 'disrupted' ? 'Service Disruption' : 
+                                                          info.status === 'warning' ? 'Reported Issue' : 'Unknown';
+          
+          // Update status class
+          statusElement.className = 'status ' + info.status;
+          
+          stationInfoBox.classList.add('visible');
+        }
+      });
+      
+      // Add mouseout event to hide station info
+      button.addEventListener('mouseout', function() {
+        document.getElementById('station-info').classList.remove('visible');
+      });
+    });
+
+    // Create window.buttonControls object for API compatibility
+    window.buttonControls = {};
+    buttons.forEach(button => {
+      const id = button.id;
+      
+      window.buttonControls[id] = {
+        element: button,
+        isActive: false,
+        // These functions now only return state without changing anything
+        toggle: function() {
+          console.log(`Button controls are now display-only. Access station info by hovering.`);
+          return this.isActive;
+        },
+        activate: function() {
+          console.log(`Button controls are now display-only. Access station info by hovering.`);
+          return this.isActive;
+        },
+        deactivate: function() {
+          console.log(`Button controls are now display-only. Access station info by hovering.`);
+          return this.isActive;
+        },
+        // Add method to update the display state if needed
+        updateDisplay: function(state) {
+          this.isActive = state;
+          if(this.isActive) {
+            this.element.classList.add('active');
+          } else {
+            this.element.classList.remove('active');
+          }
+          return this.isActive;
+        }
+      };
+    });
+
+    window.leverControls = window.buttonControls;
+
+    console.log("Station info display ready. Hover over buttons to see station information.");
+
+    const menuTrigger = document.getElementById('menu-trigger');
+    const swoopMenu = document.getElementById('swoop-menu');
+    const dropdownHeaders = document.querySelectorAll('.dropdown-header');
+
+    menuTrigger.addEventListener('click', () => {
+      swoopMenu.classList.toggle('visible');
+    });
+
+    document.addEventListener('click', (event) => {
+      if (!swoopMenu.contains(event.target) && 
+          !menuTrigger.contains(event.target) && 
+          swoopMenu.classList.contains('visible')) {
+        swoopMenu.classList.remove('visible');
+      }
+    });
+    
+    // Setup dropdown toggles
+    dropdownHeaders.forEach(header => {
+      header.addEventListener('click', () => {
+        const content = header.nextElementSibling;
+        
+        // Close all other dropdowns
+        document.querySelectorAll('.dropdown-content.open').forEach(openContent => {
+          if (openContent !== content) {
+            openContent.classList.remove('open');
+            openContent.previousElementSibling.classList.remove('open');
+          }
+        });
+        
+        // Toggle this dropdown
+        header.classList.toggle('open');
+        content.classList.toggle('open');
+      });
+    });
+  </script>
+</body>
+</html>
